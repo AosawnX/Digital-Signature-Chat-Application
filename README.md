@@ -82,3 +82,27 @@ node dist/04_replay/client.js
 **What to verify:**
 - Chat works normally.
 - If you were to capture the network packet and re-send it, the Client would log `[REJECTED] Message ... blocked by Replay Protection`.
+
+## Phase 5: Authenticated Key Exchange (Mini-CA)
+
+**Terminal 1 (Certificate Authority):**
+```bash
+node dist/05_auth/run-ca.js
+```
+*Wait for "CA Server running"*
+
+**Terminal 2 (Chat Server):**
+```bash
+node dist/05_auth/server.js
+```
+
+**Terminal 3 & 4 (Clients):**
+```bash
+node dist/05_auth/client.js
+```
+
+**Workflow:**
+1.  Clients automatically connect to CA (Port 8084) to get a signed valid Certificate.
+2.  Clients automatically connect to Chat Server (Port 8085).
+3.  **Chat**: `connect <Target_ID>` -> `msg <Text>`
+4.  **Security**: The client verifies the target's certificate against the CA's Root Key before sending any secrets.
