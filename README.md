@@ -49,3 +49,20 @@ node dist/02_signatures/server.js
 node dist/02_signatures/client.js
 ```
 *Note: Clients will now generate RSA keys on startup (taking ~1s).*
+
+## Phase 3: Hybrid Encryption
+
+**Terminal 1 (Server):**
+```bash
+node dist/03_encryption/server.js
+```
+
+**Terminal 2 & 3 (Clients):**
+```bash
+node dist/03_encryption/client.js
+```
+
+**Usage:**
+1.  **List Users**: type `list`
+2.  **Connect**: type `connect <Target_ID>` (this exchanges keys)
+3.  **Chat**: type `msg <Your Message>` (this sends encrypted text)

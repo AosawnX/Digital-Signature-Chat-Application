@@ -35,9 +35,9 @@ ws.on('message', (data) => {
         const isValid = verifySignature(content, signature, senderPublicKey);
 
         if (isValid) {
-            console.log(`\n[✅ Verified] ${senderId}: ${content}`);
+            console.log(`\n[VERIFIED] ${senderId}: ${content}`);
         } else {
-            console.log(`\n[❌ FAKE/TAMPERED] ${senderId}: ${content}`);
+            console.log(`\n[FAKE/TAMPERED] ${senderId}: ${content}`);
         }
         process.stdout.write('> ');
 
