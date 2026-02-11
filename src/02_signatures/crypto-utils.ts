@@ -25,3 +25,29 @@ export const generateRSAKeys = (): KeyPair => {
 
     return { publicKey, privateKey };
 };
+
+import { sign, verify } from 'crypto';
+
+/**
+ * Signs a message using the sender's Private Key.
+ * Returns the signature in base64 format.
+ */
+export const signMessage = (message: string, privateKey: string): string => {
+    // SHA-256 is the hashing algorithm
+    const signature = sign("sha256", Buffer.from(message), privateKey);
+    return signature.toString('base64');
+};
+
+/**
+ * Verifies a signature using the sender's Public Key.
+ * Returns true if valid, false otherwise.
+ */
+export const verifySignature = (message: string, signature: string, publicKey: string): boolean => {
+    const isVerified = verify(
+        "sha256",
+        Buffer.from(message),
+        publicKey,
+        Buffer.from(signature, 'base64')
+    );
+    return isVerified;
+};

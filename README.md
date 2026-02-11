@@ -35,4 +35,17 @@ node dist/01_plain/client.js
 ## Project Structure
 
 - `src/01_plain/`: Phase 1 - Insecure WebSocket Chat (Baseline)
-- `src/02_signatures/`: Phase 2 - Digital Signatures (Coming Soon)
+- `src/02_signatures/`: Phase 2 - Digital Signatures
+
+## Phase 2: Digital Signatures
+
+**Terminal 1 (Server):**
+```bash
+node dist/02_signatures/server.js
+```
+
+**Terminal 2 & 3 (Clients):**
+```bash
+node dist/02_signatures/client.js
+```
+*Note: Clients will now generate RSA keys on startup (taking ~1s).*
