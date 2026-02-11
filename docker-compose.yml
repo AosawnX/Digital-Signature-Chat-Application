@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  ca-server:
+    build: .
+    command: node dist/05_auth/run-ca.js
+    ports:
+      - "8084:8084"
+    networks:
+      - chat-net
+
+  chat-server:
+    build: .
+    command: node dist/05_auth/server.js
+    ports:
+      - "8085:8085"
+    depends_on:
+      - ca-server
+    networks:
+      - chat-net
+
+networks:
+  chat-net:
+    driver: bridge
