@@ -66,3 +66,19 @@ node dist/03_encryption/client.js
 1.  **List Users**: type `list`
 2.  **Connect**: type `connect <Target_ID>` (this exchanges keys)
 3.  **Chat**: type `msg <Your Message>` (this sends encrypted text)
+
+## Phase 4: Replay Protection
+
+**Terminal 1 (Server):**
+```bash
+node dist/04_replay/server.js
+```
+
+**Terminal 2 & 3 (Clients):**
+```bash
+node dist/04_replay/client.js
+```
+
+**What to verify:**
+- Chat works normally.
+- If you were to capture the network packet and re-send it, the Client would log `[REJECTED] Message ... blocked by Replay Protection`.
