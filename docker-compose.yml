@@ -1,24 +1,66 @@
 version: '3.8'
 
 services:
+  # Phase 1: Plain
+  server-p1:
+    build: .
+    command: node dist/01_plain/server.js
+    networks: [chat-net]
+
+  # Phase 2: Signatures
+  server-p2:
+    build: .
+    command: node dist/02_signatures/server.js
+    networks: [chat-net]
+
+  # Phase 3: Encryption
+  server-p3:
+    build: .
+    command: node dist/03_encryption/server.js
+    networks: [chat-net]
+
+  # Phase 4: Replay Protection
+  server-p4:
+    build: .
+    command: node dist/04_replay/server.js
+    networks: [chat-net]
+
+  # Phase 5: Auth (CA + Chat)
   ca-server:
     build: .
     command: node dist/05_auth/run-ca.js
-    ports:
-      - "8084:8084"
-    networks:
-      - chat-net
+    networks: [chat-net]
 
-  chat-server:
+  server-p5:
     build: .
     command: node dist/05_auth/server.js
+    depends_on: [ca-server]
+    networks: [chat-net]
+
+  # Caddy Reverse Proxy (Main Entrypoint)
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
     ports:
-      - "8085:8085"
-    depends_on:
-      - ca-server
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
     networks:
       - chat-net
+    depends_on:
+      - server-p1
+      - server-p2
+      - server-p3
+      - server-p4
+      - server-p5
 
 networks:
   chat-net:
     driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,42 @@
+# Caddyfile for Reverse Proxying Chat App Services
+
+# Replace :80 with your domain name (e.g., chat.example.com) for auto-HTTPS.
+# For testing on EC2 IP directly (no domain), use :80 or :443 with self-signed if needed.
+# For simplicity with "nip.io" (wildcard DNS for IPs), use: {$DOMAIN}
+
+:80 {
+    # Phase 1
+    handle_path /phase1/* {
+        reverse_proxy server-p1:8080
+    }
+
+    # Phase 2
+    handle_path /phase2/* {
+        reverse_proxy server-p2:8081
+    }
+
+    # Phase 3
+    handle_path /phase3/* {
+        reverse_proxy server-p3:8082
+    }
+
+    # Phase 4
+    handle_path /phase4/* {
+        reverse_proxy server-p4:8083
+    }
+
+    # Phase 5 (Chat)
+    handle_path /phase5/* {
+        reverse_proxy server-p5:8085
+    }
+
+    # CA Server
+    handle_path /ca/* {
+        reverse_proxy ca-server:8084
+    }
+
+    # Default: 404
+    handle {
+        respond "Chat App Backend Gateway" 200
+    }
+}
