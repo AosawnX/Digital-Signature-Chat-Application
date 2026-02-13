@@ -218,3 +218,62 @@ export async function importKeyForEncryption(spkiPem: string): Promise<any> {
     }
 }
 
+// --- RSA ENCRYPTION / DECRYPTION (For Session Key) ---
+
+export async function encryptRSA(data: Uint8Array, publicKeyPem: string): Promise<string> {
+    if (isWebCryptoAvailable()) {
+        const key = await importKeyForEncryption(publicKeyPem);
+        const encrypted = await window.crypto.subtle.encrypt(
+            { name: "RSA-OAEP" },
+            key,
+            data as any
+        );
+        return arrayBufferToBase64(encrypted);
+    } else {
+        // Forge
+        const publicKey = forge.pki.publicKeyFromPem(publicKeyPem);
+        const encrypted = publicKey.encrypt(String.fromCharCode(...data), 'RSA-OAEP', {
+            md: forge.md.sha256.create(),
+            mgf1: { md: forge.md.sha256.create() }
+        });
+        return window.btoa(encrypted);
+    }
+}
+
+export async function decryptRSA(base64Data: string, privateKey: any): Promise<Uint8Array> {
+    if (isWebCryptoAvailable() && privateKey instanceof CryptoKey) {
+        // We need to re-import the private key with "decrypt" usage.
+        const jwk = await window.crypto.subtle.exportKey("jwk", privateKey);
+        jwk.key_ops = ["decrypt"];
+        const decryptKey = await window.crypto.subtle.importKey(
+            "jwk",
+            jwk,
+            { name: "RSA-OAEP", hash: "SHA-256" },
+            true,
+            ["decrypt"]
+        );
+
+        const data = base64ToArrayBuffer(base64Data);
+        const decrypted = await window.crypto.subtle.decrypt(
+            { name: "RSA-OAEP" },
+            decryptKey,
+            data as any
+        );
+        return new Uint8Array(decrypted);
+
+    } else {
+        // Forge
+        // privateKey is Forge Key Object
+        const encrypted = window.atob(base64Data);
+        const decrypted = privateKey.decrypt(encrypted, 'RSA-OAEP', {
+            md: forge.md.sha256.create(),
+            mgf1: { md: forge.md.sha256.create() }
+        });
+        const len = decrypted.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = decrypted.charCodeAt(i);
+        }
+        return bytes;
+    }
+}

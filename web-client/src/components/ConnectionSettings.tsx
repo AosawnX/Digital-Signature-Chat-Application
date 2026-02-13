@@ -20,13 +20,19 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({ serverUr
 
     const handleSave = () => {
         let cleanUrl = url.trim();
+
+        // Handle HTTP/HTTPS prefix replacement
+        if (cleanUrl.startsWith('http://')) {
+            cleanUrl = cleanUrl.replace('http://', 'ws://');
+        } else if (cleanUrl.startsWith('https://')) {
+            cleanUrl = cleanUrl.replace('https://', 'wss://');
+        }
+
         // Auto-add prefix if missing (heuristic)
         if (!cleanUrl.startsWith('ws://') && !cleanUrl.startsWith('wss://')) {
-            // Default to ws:// for IPs, wss:// for domains? Hard to guess.
-            // Let's just default to ws:// if localhost or IP, wss:// otherwise?
-            // Safer to just ask user, or default to ws:// since that's our current setup.
             cleanUrl = `ws://${cleanUrl}`;
         }
+
         // Remove trailing slash
         if (cleanUrl.endsWith('/')) {
             cleanUrl = cleanUrl.slice(0, -1);

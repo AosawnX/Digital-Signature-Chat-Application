@@ -228,50 +228,66 @@ export default function App() {
       if (payload.type === 'key_exchange') {
         addLog('crypto', `Received Encrypted Session Key from ${senderId}`);
         try {
-          // Decrypt AES Key with RSA Private
-          // Assuming payload.encryptedKey is compatible
-          // Note: Our browser crypto stores keys in memory, but here we might have raw PEM private key from generateRSAKeys()
-          // Wait, generateRSAKeys returned { publicKey, privateKey (PEM), raw }. 
-          // We need the RAW key for usage.
+          // Decrypt AES Key with RSA Private (Real)
+          const aesKeyBytes = await Crypto.decryptRSA(payload.encryptedKey, keyPair.raw.privateKey);
 
-          // Fix: I exported 'raw' in generateRSAKeys for exactly this reason.
+          // Import AES Key (bits -> CryptoKey or Raw depending on env)
+          // We need a helper to arbitrary import raw bits as AES-GCM key
+          // Wait, I don't have a helper to import RAW bits as AES key in crypto-browser?
+          // generateAESKey returns { base64, keyObj }. 
+          // I need to construct keyObj from bytes.
+          // Let's add inline import logic or assumes implementation details.
 
-          // Decrypt AES Key
-          // Node uses RSA-OAEP. Browser uses RSA-OAEP.
-          // BUT we need to import the private key for encryption?
-          // Check crypto-browser.ts... 
+          // Simpler: Just stick bytes in _sessionKey if using Forge? 
+          // If WebCrypto, importKey.
 
-          // We need to implement decryptAESKeyWithRSA in browser
-          // Since I didn't verify that yet, let's assume we can add it or mock it if needed.
-          // Actually, let's implement the logic here inline or call utility.
+          let sessionKeyObj;
+          if (window.crypto && window.crypto.subtle) {
+            sessionKeyObj = await window.crypto.subtle.importKey(
+              "raw", aesKeyBytes as any, { name: "AES-GCM" }, true, ["encrypt", "decrypt"]
+            );
+          } else {
+            // Forge uses raw bytes string
+            // aesKeyBytes is Uint8Array.
+            sessionKeyObj = String.fromCharCode(...aesKeyBytes);
+          }
 
-          // Temporary: Just ack
-          addLog('success', 'Session Key Decrypted (Simulated for UI)');
+          addLog('success', 'Session Key Decrypted & Established.');
           setTargetUser({ id: senderId });
+          setSessionKey(sessionKeyObj);
 
-          // In a real app we would finish the handshake. 
-          // For this UI demo, let's assume valid session if we get here.
-        } catch (e) {
-          addLog('error', 'Decryption Failed');
+        } catch (e: any) {
+          addLog('error', 'Key Decryption Failed: ' + e.message);
         }
       }
       else if (payload.type === 'chat') {
         // Decrypt content
         addLog('crypto', `Decrypting message from ${senderId}...`);
-        // const plain = await Crypto.decryptMessageAES(...)
-        // For demo UI (since we might not have established the key fully in this rapid code),
-        // We will show the raw encrypted text or "Decrypted Message" placeholder if key missing.
 
-        // If we have session key, decrypt.
-        // else show lock.
-        addMessage({
-          id: Date.now().toString(),
-          sender: senderId,
-          text: "(Encrypted Message)",
-          isOwn: false,
-          timestamp: new Date(),
-          isEncrypted: true
-        });
+        try {
+          if (!_sessionKey) {
+            throw new Error("No session key established.");
+          }
+          const plainText = await Crypto.decryptMessageAES(payload.content, _sessionKey);
+
+          addMessage({
+            id: Date.now().toString(),
+            sender: senderId,
+            text: plainText,
+            isOwn: false,
+            timestamp: new Date(),
+            isEncrypted: true
+          });
+        } catch (e) {
+          addMessage({
+            id: Date.now().toString(),
+            sender: senderId,
+            text: "🔒 (Decryption Failed)",
+            isOwn: false,
+            timestamp: new Date(),
+            isEncrypted: true
+          });
+        }
       }
     }
   };
@@ -280,7 +296,7 @@ export default function App() {
 
   // --- SEND HANDLER ---
   const handleSendMessage = async (text: string) => {
-    // Optimistic UI
+    // Optimistic UI (We show plaintext to self)
     addMessage({ id: Date.now().toString(), sender: 'Me', text, isOwn: true, timestamp: new Date() });
 
     if (phase === 1) {
@@ -290,26 +306,27 @@ export default function App() {
       // Sign
       if (keyPair) {
         addLog('crypto', 'Signing message...');
-        // const sig = await Crypto.signMessage(text, keyPair.privateKey);
-        // ws.current?.send(...)
-        // Simulating for UI speed
-        ws.current?.send(JSON.stringify({ type: 'broadcast', payload: text, signature: 'SIMULATED_SIG' }));
+        const sig = await Crypto.signMessageWithKeyObject(text, keyPair.raw.privateKey);
+        ws.current?.send(JSON.stringify({ type: 'broadcast', payload: text, signature: sig }));
       }
     }
     else if (phase >= 3) {
       // Encrypt
-      if (targetUser) {
+      if (targetUser && _sessionKey) {
         addLog('crypto', `Encrypting for ${targetUser.id} (AES-GCM)...`);
+
+        const encryptedJson = await Crypto.encryptMessageAES(text, _sessionKey);
+
         ws.current?.send(JSON.stringify({
           type: 'direct',
           targetId: targetUser.id,
           payload: {
             type: 'chat',
-            content: 'ENCRYPTED_BLOB'
+            content: encryptedJson
           }
         }));
       } else {
-        addLog('error', 'Select a user to chat securely.');
+        addLog('error', 'Secure Connection Not Established. Click user to connect.');
       }
     }
   };
@@ -319,17 +336,54 @@ export default function App() {
     addLog('info', `Targeting ${userId}...`);
     if (phase >= 3) {
       addLog('crypto', 'Initiating Handshake... (Generating AES Key)');
-      // Handshake logic
-      /*
-        const aesKey = await Crypto.generateAESKey();
-        const encKey = await Crypto.encryptAESKeyWithRSA(aesKey, targetUserPubKey);
-        ws.send(key_exchange)
-      */
+
+      // 1. Generate AES Session Key
+      // 1. Generate AES Session Key
+      const aesKeyData = await Crypto.generateAESKey();
+
+      // 2. Encrypt AES Key with Target's Public Key
+      // WE need target's public key.
+      let targetPubKey = null;
+
+      if (userId === myId && keyPair) {
+        // Optimization: Connecting to self? Use local key!
+        targetPubKey = keyPair.publicKey;
+        addLog('info', 'Connecting to self: Using local Public Key.');
+      } else {
+        const target = users.find(u => u.id === userId);
+        if (target && target.publicKey) {
+          targetPubKey = target.publicKey;
+        } else {
+          // Debugging: Dump user list to console/log
+          console.log('Current Users:', users);
+          addLog('error', `Cannot connect: User ${userId} has no Public Key. (See console)`);
+          return;
+        }
+      }
+
+      // Extract raw bytes of AES key to encrypt
+      let rawAesBytes: Uint8Array;
+      if (window.crypto && window.crypto.subtle) {
+        const exported = await window.crypto.subtle.exportKey("raw", aesKeyData.keyObj as CryptoKey);
+        rawAesBytes = new Uint8Array(exported);
+      } else {
+        // Forge: AesKeyData.keyObj IS the bytes string
+        // Convert to Uint8Array for encryptRSA helper
+        const str = aesKeyData.keyObj as string;
+        rawAesBytes = new Uint8Array(str.length);
+        for (let i = 0; i < str.length; i++) rawAesBytes[i] = str.charCodeAt(i);
+      }
+
+      const encryptedKeyBase64 = await Crypto.encryptRSA(rawAesBytes, targetPubKey);
+
       ws.current?.send(JSON.stringify({
         type: 'direct',
         targetId: userId,
-        payload: { type: 'key_exchange', encryptedKey: 'SIMULATED_KEY' }
+        payload: { type: 'key_exchange', encryptedKey: encryptedKeyBase64 }
       }));
+
+      addLog('success', 'Sent Encrypted Session Key.');
+      setSessionKey(aesKeyData.keyObj); // Store for self ONLY after success
     }
   };
 
