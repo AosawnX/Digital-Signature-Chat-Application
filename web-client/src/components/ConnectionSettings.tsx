@@ -19,7 +19,21 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({ serverUr
     }, [serverUrl, usePorts]);
 
     const handleSave = () => {
-        onSave(url, portsMode);
+        let cleanUrl = url.trim();
+        // Auto-add prefix if missing (heuristic)
+        if (!cleanUrl.startsWith('ws://') && !cleanUrl.startsWith('wss://')) {
+            // Default to ws:// for IPs, wss:// for domains? Hard to guess.
+            // Let's just default to ws:// if localhost or IP, wss:// otherwise?
+            // Safer to just ask user, or default to ws:// since that's our current setup.
+            cleanUrl = `ws://${cleanUrl}`;
+        }
+        // Remove trailing slash
+        if (cleanUrl.endsWith('/')) {
+            cleanUrl = cleanUrl.slice(0, -1);
+        }
+
+        setUrl(cleanUrl); // Update state
+        onSave(cleanUrl, portsMode);
         setIsOpen(false);
     };
 
@@ -73,8 +87,8 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({ serverUr
                             <button
                                 onClick={() => setPortsMode(true)}
                                 className={`p-3 rounded-lg border text-sm font-medium transition-all ${portsMode
-                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                    : 'border-gray-200 hover:border-gray-300 text-gray-600'
                                     }`}
                             >
                                 <div className="font-bold mb-1">Port-Based</div>
@@ -85,8 +99,8 @@ export const ConnectionSettings: React.FC<ConnectionSettingsProps> = ({ serverUr
                             <button
                                 onClick={() => setPortsMode(false)}
                                 className={`p-3 rounded-lg border text-sm font-medium transition-all ${!portsMode
-                                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                        : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                    : 'border-gray-200 hover:border-gray-300 text-gray-600'
                                     }`}
                             >
                                 <div className="font-bold mb-1">Path-Based</div>

@@ -139,8 +139,8 @@ export default function App() {
       };
 
       return () => socket.close();
-    } catch (e) {
-      addLog('error', 'Invalid URL or Connection Failed');
+    } catch (e: any) {
+      addLog('error', `Connection Failed: ${e.message || 'Invalid URL'}`);
     }
   }, [phase, keyPair, serverUrl, usePorts, addLog]); // Re-run when settings change
 
