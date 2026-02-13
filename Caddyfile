@@ -6,32 +6,32 @@
 
 :80 {
     # Phase 1
-    handle_path /phase1/* {
+    handle /phase1* {
         reverse_proxy server-p1:8080
     }
 
     # Phase 2
-    handle_path /phase2/* {
+    handle /phase2* {
         reverse_proxy server-p2:8081
     }
 
     # Phase 3
-    handle_path /phase3/* {
+    handle /phase3* {
         reverse_proxy server-p3:8082
     }
 
     # Phase 4
-    handle_path /phase4/* {
+    handle /phase4* {
         reverse_proxy server-p4:8083
     }
 
     # Phase 5 (Chat)
-    handle_path /phase5/* {
+    handle /phase5* {
         reverse_proxy server-p5:8085
     }
 
     # CA Server
-    handle_path /ca/* {
+    handle /ca* {
         reverse_proxy ca-server:8084
     }
 
