@@ -7,10 +7,7 @@
 :80 {
     # Serve Static Files (Frontend)
     root * /srv
-    file_server
 
-    # Helper: If file not found, try index.html (SPA)
-    try_files {path} /index.html
     # Phase 1
     handle /phase1* {
         reverse_proxy server-p1:8080
@@ -41,8 +38,9 @@
         reverse_proxy ca-server:8084
     }
 
-    # Default: 404
+    # Default: Serve Frontend (SPA)
     handle {
-        respond "Chat App Backend Gateway" 200
+        try_files {path} /index.html
+        file_server
     }
 }
