@@ -21,10 +21,24 @@ export default function App() {
   const [myId, setMyId] = useState<string>('');
 
   // Connection Settings
-  const [serverUrl, setServerUrl] = useState(() => localStorage.getItem('chat_server_url') || 'ws://localhost');
+  const [serverUrl, setServerUrl] = useState(() => {
+    const saved = localStorage.getItem('chat_server_url');
+    if (saved) return saved;
+    // Auto-detect: If on deployment (not localhost), use current origin
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') return 'ws://localhost';
+
+    // Replace http/https with ws/wss
+    return window.location.origin.replace(/^http/, 'ws');
+  });
+
   const [usePorts, setUsePorts] = useState(() => {
     const saved = localStorage.getItem('chat_use_ports');
-    return saved ? saved === 'true' : true;
+    if (saved) return saved === 'true';
+
+    // Auto-detect: Use Ports for localhost, Path-based for deployment
+    const host = window.location.hostname;
+    return (host === 'localhost' || host === '127.0.0.1');
   });
 
   // State for keys
