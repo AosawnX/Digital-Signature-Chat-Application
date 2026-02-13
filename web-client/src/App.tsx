@@ -134,6 +134,12 @@ export default function App() {
       socket.onmessage = async (event) => {
         try {
           const msg = JSON.parse(event.data);
+
+          if (msg.type === 'welcome') {
+            setMyId(msg.id);
+            addLog('info', `My ID: ${msg.id}`);
+          }
+
           handleIncomingMessage(msg);
         } catch (e) {
           // Plain text message in Phase 1?

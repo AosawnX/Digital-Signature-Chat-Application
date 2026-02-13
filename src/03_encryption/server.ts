@@ -21,6 +21,9 @@ wss.on('connection', (ws: Client) => {
     clients.set(ws.id, ws);
     console.log(`Client ${ws.id} connected`);
 
+    // Send Welcome message with ID so client knows who they are
+    ws.send(JSON.stringify({ type: 'welcome', id: ws.id }));
+
     ws.on('message', (data) => {
         try {
             const msg: Message = JSON.parse(data.toString());
