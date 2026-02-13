@@ -162,7 +162,21 @@ export default function App() {
     } catch (e: any) {
       addLog('error', `Connection Failed: ${e.message || 'Invalid URL'}`);
     }
-  }, [phase, keyPair, serverUrl, usePorts, addLog]); // Re-run when settings change
+  }, [phase, serverUrl, usePorts, addLog]); // REMOVED keyPair from deps
+
+  // --- LATE REGISTRATION EFFECT ---
+  // If keys are generated AFTER connection is established
+  useEffect(() => {
+    if (connected && keyPair && phase >= 2 && phase <= 4) {
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({
+          type: 'register',
+          payload: { publicKey: keyPair.publicKey }
+        }));
+        addLog('network', 'Sent Public Key (Async)');
+      }
+    }
+  }, [keyPair, connected, phase, addLog]);
 
 
   // --- PHASE 5 SPECIAL HANDLER ---
