@@ -5,6 +5,12 @@
 # For simplicity with "nip.io" (wildcard DNS for IPs), use: {$DOMAIN}
 
 :80 {
+    # Serve Static Files (Frontend)
+    root * /srv
+    file_server
+
+    # Helper: If file not found, try index.html (SPA)
+    try_files {path} /index.html
     # Phase 1
     handle /phase1* {
         reverse_proxy server-p1:8080
