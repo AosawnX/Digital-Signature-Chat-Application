@@ -106,3 +106,21 @@ node dist/05_auth/client.js
 2.  Clients automatically connect to Chat Server (Port 8085).
 3.  **Chat**: `connect <Target_ID>` -> `msg <Text>`
 4.  **Security**: The client verifies the target's certificate against the CA's Root Key before sending any secrets.
+
+---
+
+## v1.1 Update (Web Client & Deployment)
+
+**New Features:**
+- **Web Interface**: React + Vite frontend available in `web-client`.
+- **End-to-End Encryption**: Real-time RSA+AES encryption now working in browser.
+- **Auto-Discovery**: Server sends "Welcome" packet with Client ID to facilitate self-connection and identity awareness.
+- **Robustness**: 
+    - Fixed race conditions in key registration.
+    - Improved WebSocket stability.
+    - Deployment-ready `Dockerfile` and `docker-compose.yml` (Nginx/Caddy support).
+
+**Deployment:**
+- **AWS EC2**: Fully deployed and tested on Amazon Linux 2023.
+- **reverse Proxy**: Caddy configured for automatic HTTPS and static file serving.
+
